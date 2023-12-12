@@ -2,6 +2,7 @@ import re
 
 from math_classes import Task, TargetFunc
 
+
 class Parser:
 
     def __init__(self, path_file: str):
@@ -14,9 +15,8 @@ class Parser:
         target_func = TargetFunc(parsed_text[0])
         matrix = parsed_text[1]
         task = Task(target_func, matrix)
-        #print(task.A)
 
-        task.step_algo()
+        task.algo()
 
 
 if __name__ == '__main__':

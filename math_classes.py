@@ -11,6 +11,44 @@ class TargetFunc:
         self._func = func.strip()
         self._optimization_task = target.strip()
 
+        self.func_matrix = self._target_matrix()
+
+    @staticmethod
+    def _find_max_x(func: str) -> int:
+        max_x = -1
+        all_x = re.findall('x_[0-9]+', func)
+        all_x = [int(x.replace('x_', '')) for x in all_x]
+        if (curr_max := max(all_x)) > max_x:
+            max_x = curr_max
+
+        return max_x
+
+    def _target_matrix(self):
+        matrix = [0 for _ in range(self._find_max_x(self._func) + 1)]
+        sign_map = {'-': -1, '+': 1}
+
+        bias = re.search('[0-9]+[^x\+-]', self._func)
+        if bias:
+            bias = bias.group(0)
+
+        x_idx = [int(x) - 1 for x in re.findall(r'x_(\d+)', self._func)]
+        coefs = re.split('x_[0-9]+', self._func)[:-1]
+
+        coefs = [
+            float(re.sub(r'\D', '', coef))
+            if coef not in ('-', '+')
+            else sign_map.get(coef)
+            for coef in coefs
+        ]
+
+        for x_id, coef in zip(x_idx, coefs):
+            matrix[x_id + 1] = coef
+
+        matrix[0] = bias
+
+        matrix = np.array([float(x) if x is not None else 0 for x in matrix])
+        return matrix
+
     @property
     def func(self):
         return self._func
@@ -100,7 +138,7 @@ class Task:
 
         return matrix, b, x_matrix, x_target
 
-    def helper_func(self):
+    def algo(self):
         prev_matrix = deepcopy(self._A)
         b = deepcopy(self._b)
         q = -np.sum(self._A, axis=0).reshape(1, -1)
@@ -149,12 +187,27 @@ class Task:
                 prev_matrix = np.delete(new_matrix, add_idx, axis=1)
                 self._x_matrix.remove(check[0])
 
-        print('Done')
-        print(self._x_matrix)
-        print(self._x_target)
+        target_x = [x for x in self._x_target if x in self._x_matrix_hist]
 
-    def main_alg(self):
+        x_mapping = {}
 
+        for x_idx, x_var in enumerate(target_x):
+            x_coefs = -prev_matrix[x_idx, :-1]
+            bias = prev_matrix[x_idx, -1]
+            x_mapping |= {x_var: np.append(bias, x_coefs)}
+
+        target_matrix = self._target_task.func_matrix
+
+        print(target_matrix)
+        print(x_mapping)
+
+        for x_idx, coef in enumerate(target_matrix[1:]):
+            print(coef, x_idx)
+
+        z_matrix = np.sum([
+            x_mapping[x_idx] * coef
+            for x_idx, coef in enumerate(target_matrix[1:])
+        ], axis=0)
 
     @property
     def A(self):
