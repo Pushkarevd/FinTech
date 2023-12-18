@@ -20,5 +20,5 @@ class Parser:
 
 
 if __name__ == '__main__':
-    instance = Parser('./task')
+    instance = Parser('task')
     instance.read_file()

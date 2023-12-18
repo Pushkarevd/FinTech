@@ -187,6 +187,10 @@ class Task:
                 prev_matrix = np.delete(new_matrix, add_idx, axis=1)
                 self._x_matrix.remove(check[0])
 
+        print(self._x_matrix)
+        print(self._x_target)
+        print(prev_matrix)
+
         target_x = [x for x in self._x_target if x in self._x_matrix_hist]
 
         x_mapping = {}
@@ -198,16 +202,16 @@ class Task:
 
         target_matrix = self._target_task.func_matrix
 
-        print(target_matrix)
-        print(x_mapping)
 
+
+        """
         for x_idx, coef in enumerate(target_matrix[1:]):
             print(coef, x_idx)
 
         z_matrix = np.sum([
             x_mapping[x_idx] * coef
             for x_idx, coef in enumerate(target_matrix[1:])
-        ], axis=0)
+        ], axis=0)"""
 
     @property
     def A(self):
