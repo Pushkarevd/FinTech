@@ -38,6 +38,9 @@ class RBC:
             url = self.form_url(dt_pointer)
             chunk, dt_pointer = self.get_chunk(url)
 
+            if chunk is None:
+                break
+
             result.extend(chunk)
 
             dt_pointer = int(dt_pointer)

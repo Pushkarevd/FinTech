@@ -14,13 +14,13 @@ class Loader:
         self.filename = filename
         self._df = pd.read_csv(self.filename)
         self._extractor = Goose()
-        self._target_filename = f'ready_data.csv'
+        self._target_filename = f'./data/ready_data.csv'
 
     def load_one_article(self, row: pd.Series) -> str:
         url = row.url
         response = requests.get(url, headers=self.header)
         article = self._extractor.extract(raw_html=response.text)
-        return article.cleaned_text
+        return article.cleaned_text.replace(';', '')
 
     def add_text_column(self, df: pd.DataFrame) -> pd.DataFrame:
         df['article_text'] = df.apply(self.load_one_article, axis=1)
@@ -37,7 +37,7 @@ class Loader:
             for future in futures:
                 resulted_chunks.append(future.result())
 
-        pd.concat(resulted_chunks).to_csv(self._target_filename, index=False)
+        pd.concat(resulted_chunks).to_csv(self._target_filename, index=False, sep=';')
 
 
 if __name__ == '__main__':
