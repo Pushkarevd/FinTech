@@ -1,7 +1,12 @@
 import re
 from copy import deepcopy
+from fractions import Fraction
 
 import numpy as np
+import pandas as pd
+
+
+pd.set_option("display.precision", 2)
 
 
 class TargetFunc:
@@ -62,9 +67,9 @@ class Task:
 
     def __init__(self, target_task: TargetFunc, matrix_string: str):
         self._target_task = target_task
-        self._A, self._b, self._x_matrix, self._x_target = self._prepare_matrix(matrix_string)
+        self._A, self._b, self._x_columns, self._x_rows = self._prepare_matrix(matrix_string)
 
-        self._x_target_hist = deepcopy(self._x_target)
+        self._x_aditional_history = deepcopy(self._x_rows)
 
     def _prepare_matrix(self, matrix_string: str) -> tuple:
         """
@@ -118,6 +123,7 @@ class Task:
                 b[row_id] = -b[row_id]
 
         matrix = np.array(matrix)
+        matrix = matrix + Fraction()
 
         self._x_matrix_hist = [x for x in range(matrix.shape[0])]
 
@@ -138,80 +144,61 @@ class Task:
 
         return matrix, b, x_matrix, x_target
 
-    def algo(self):
-        prev_matrix = deepcopy(self._A)
-        b = deepcopy(self._b)
-        q = -np.sum(self._A, axis=0).reshape(1, -1)
-        prev_matrix = np.append(prev_matrix, q, axis=0)
-        b = np.append(b, np.array([-np.sum(b, axis=0)]), axis=0)
-        b = np.reshape(b, (len(b), 1))
-        prev_matrix = np.concatenate((prev_matrix, b), axis=1)
+    def __debug_print(self, matrix: np.array):
+        tmp_columns = [x + 1 for x in self._x_columns]
+        tmp_index = [x + 1 for x in self._x_rows]
+        tmp_columns.append('b')
+        tmp_index.append('c')
+        print(pd.DataFrame(matrix, columns=tmp_columns, index=tmp_index))
 
-        # Начало итерационного алгоритма
-        while not all([round(x, 3) == 0 for x in prev_matrix[-1, :]]):
-            trg_col_idx = []
-            for col in self._x_matrix_hist:
-                if col in self._x_matrix:
-                    trg_col_idx.append(self._x_matrix.index(col))
+    def additional_step(self):
+        matrix = np.append(self._A, self._b.reshape(1, -1).T, axis=1)
+        last_row = -np.sum(matrix, axis=0).reshape(1, -1)
+        matrix = np.append(matrix, last_row, axis=0)
 
-            target_col_idx = np.argmin(prev_matrix[-1, trg_col_idx])
-            a_div = [x if x > 0 else 10 ** 10 for x in prev_matrix[:-1, -1] / prev_matrix[:-1, target_col_idx]]
-            target_row_idx = np.argmin(a_div)
+        print('Формирование изначальной матрицы')
+        self.__debug_print(matrix)
 
-            # Замена переменных
-            self._x_matrix[target_col_idx], self._x_target[target_row_idx] = self._x_target[target_row_idx], \
-                self._x_matrix[target_col_idx]
+        # Пока последняя строка матрицы вся не будет состоять из неотрицательных элементов
+        while not all((matrix[-1, :] >= 0)):
+            # Определение разрешающего столбца
+            target_col = np.argmin(matrix[-1, :-1])
 
-            # Добавляем доп столбцы в основную матрицу
-            new_matrix = deepcopy(prev_matrix)
+            # Определение разрешающей строки
+            b = matrix[:-1, -1]
+            target_col_elem = matrix[:-1, target_col]
+            target_row = np.argmin([b_x / m_x if m_x > 0 else 10 ** 10 for m_x, b_x in zip(target_col_elem, b)])
 
-            # Расчет разрешающего элемента
-            target_elem = prev_matrix[target_row_idx, target_col_idx]
+            # Замена переменных строк и столбца
+            self._x_columns[target_col], self._x_rows[target_row] = self._x_rows[target_row], self._x_columns[target_col]
 
-            # Изменение матрицы по формуле
-            for row_idx in range(prev_matrix.shape[0]):
-                for col_idx in range(prev_matrix.shape[1]):
-                    if target_col_idx == col_idx and target_row_idx == row_idx:
-                        new_matrix[row_idx][col_idx] = 1 / target_elem
-                    elif row_idx == target_row_idx and target_col_idx != col_idx:
-                        new_matrix[row_idx][col_idx] = prev_matrix[row_idx][col_idx] / target_elem
-                    elif col_idx == target_col_idx and row_idx != target_row_idx:
-                        new_matrix[row_idx][col_idx] = -prev_matrix[row_idx][col_idx] / target_elem
+            # Формируем матрицу следующей итерации
+            next_matrix = deepcopy(matrix)
+
+            # Расчет следующей итерации
+            for row_idx in range(matrix.shape[0]):
+                for col_idx in range(matrix.shape[1]):
+                    if target_row == row_idx and target_col == col_idx:
+                        next_matrix[target_row][target_col] = 1 / matrix[target_row][target_col]
+                    elif target_col == col_idx and target_row != row_idx:
+                        next_matrix[row_idx][col_idx] = -matrix[row_idx][col_idx] / matrix[target_row][target_col]
+                    elif target_row == row_idx and target_col != col_idx:
+                        next_matrix[row_idx][col_idx] = matrix[row_idx][col_idx] / matrix[target_row][target_col]
                     else:
-                        new_matrix[row_idx][col_idx] -= (prev_matrix[target_row_idx][col_idx] * prev_matrix[row_idx][
-                            target_col_idx]) / target_elem
+                        next_matrix[row_idx][col_idx] = (matrix[row_idx][col_idx]
+                                                         - ((matrix[target_row][col_idx] * matrix[row_idx][target_col])
+                                                            / matrix[target_row][target_col]))
 
-            check = [x for x in self._x_matrix if x in self._x_target_hist]
-            if len(check) > 0:
-                add_idx = self._x_matrix.index(check[0])
-                prev_matrix = np.delete(new_matrix, add_idx, axis=1)
-                self._x_matrix.remove(check[0])
+            # Удаление столбца с вспомогательной переменной
+            check_aditional = [x for x in self._x_columns if x in self._x_aditional_history]
+            if len(check_aditional) > 0:
+                add_idx = self._x_columns.index(check_aditional[0])
+                next_matrix = np.delete(next_matrix, add_idx, axis=1)
+                self._x_columns.remove(check_aditional[0])
 
-        print(self._x_matrix)
-        print(self._x_target)
-        print(prev_matrix)
+            matrix = next_matrix
 
-        target_x = [x for x in self._x_target if x in self._x_matrix_hist]
-
-        x_mapping = {}
-
-        for x_idx, x_var in enumerate(target_x):
-            x_coefs = -prev_matrix[x_idx, :-1]
-            bias = prev_matrix[x_idx, -1]
-            x_mapping |= {x_var: np.append(bias, x_coefs)}
-
-        target_matrix = self._target_task.func_matrix
-
-
-
-        """
-        for x_idx, coef in enumerate(target_matrix[1:]):
-            print(coef, x_idx)
-
-        z_matrix = np.sum([
-            x_mapping[x_idx] * coef
-            for x_idx, coef in enumerate(target_matrix[1:])
-        ], axis=0)"""
+            self.__debug_print(matrix)
 
     @property
     def A(self):

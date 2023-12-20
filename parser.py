@@ -1,4 +1,5 @@
 import re
+from fractions import Fraction
 
 from math_classes import Task, TargetFunc
 
@@ -16,7 +17,7 @@ class Parser:
         matrix = parsed_text[1]
         task = Task(target_func, matrix)
 
-        task.algo()
+        task.additional_step()
 
 
 if __name__ == '__main__':
