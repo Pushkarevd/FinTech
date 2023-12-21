@@ -19,6 +19,20 @@ class Parser:
         task.algo()
 
 
+class ParserGPT:
+    def __init__(self, task: str):
+        self.__task = task
+
+    def solve(self):
+        parsed_text = self.__task.split('\n')
+
+        target_func = TargetFunc(parsed_text[0])
+        matrix = '\n'.join(parsed_text[1:])
+        task = Task(target_func, matrix)
+
+        task.algo()
+
+
 if __name__ == '__main__':
     instance = Parser('task')
     instance.read_file()
