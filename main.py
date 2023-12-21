@@ -1,4 +1,24 @@
-import ast
+import re
+
+from math_classes import Task, TargetFunc
 
 
-print(f'{-3.3306690738754696e-16:.2f}')
+class Parser:
+
+    def __init__(self, path_file: str):
+        self.__path_file = path_file
+
+    def read_file(self):
+        with open(self.__path_file, 'r') as file:
+            parsed_text = re.split('----.*?----', file.read())[1:]
+
+        target_func = TargetFunc(parsed_text[0])
+        matrix = parsed_text[1]
+        task = Task(target_func, matrix)
+
+        task.algo()
+
+
+if __name__ == '__main__':
+    instance = Parser('task')
+    instance.read_file()

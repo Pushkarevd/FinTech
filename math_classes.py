@@ -125,7 +125,6 @@ class Task:
                 else sign_map.get(coef)
                 for coef in coefs
             ]
-            print(coefs)
 
             for x_id, coef in zip(x_idx, coefs):
                 matrix[row_id][x_id] = coef
