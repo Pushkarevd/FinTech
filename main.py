@@ -27,7 +27,7 @@ class ParserGPT:
         parsed_text = self.__task.split('\n')
 
         target_func = TargetFunc(parsed_text[0])
-        matrix = '\n'.join(parsed_text[1:])
+        matrix = '\n'.join(parsed_text[2:])
         task = Task(target_func, matrix)
 
         task.algo()
