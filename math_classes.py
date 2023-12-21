@@ -15,7 +15,7 @@ class TargetFunc:
         self._func = func.strip()
         self._optimization_task = target.strip()
 
-        self.func_matrix = self._target_matrix()
+        self._func_matrix = self._target_matrix()
 
     @staticmethod
     def _find_max_x(func: str) -> int:
@@ -51,6 +51,8 @@ class TargetFunc:
         matrix[-1] = bias
 
         matrix = np.array([float(x) if x is not None else 0 for x in matrix])
+        if self.target == 'max':
+            matrix = -matrix
         return matrix
 
     @property
@@ -60,6 +62,17 @@ class TargetFunc:
     @property
     def target(self):
         return self._optimization_task
+
+    @property
+    def func_matrix(self):
+        return self._func_matrix
+
+    @property
+    def result_matrix(self):
+        if self.target == 'max':
+            return -self._func_matrix
+        else:
+            return self._func_matrix
 
 
 class Task:
@@ -235,16 +248,18 @@ class Task:
             [
                 t_x * coef
                 for t_x, coef in
-                zip(vector[:len(self._target_task.func_matrix[:-1])], self._target_task.func_matrix[:-1])
+                zip(vector[:len(self._target_task.result_matrix[:-1])], self._target_task.result_matrix[:-1])
             ]
-        ) + self._target_task.func_matrix[-1]
+        ) + self._target_task.result_matrix[-1]
 
         print(f'Значение функции в точке:')
         print(round(result, 4))
 
     def algo(self):
         matrix = self.additional_step()
+        print('Окончание выполнения вспомогательной задачи')
         self.__debug_print(matrix)
+
         new_function = self.get_new_function(matrix)
         target_matrix = deepcopy(matrix)
         target_matrix[-1] = new_function
