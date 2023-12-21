@@ -5,7 +5,6 @@ from fractions import Fraction
 import numpy as np
 import pandas as pd
 
-
 pd.set_option("display.precision", 2)
 
 
@@ -47,9 +46,9 @@ class TargetFunc:
         ]
 
         for x_id, coef in zip(x_idx, coefs):
-            matrix[x_id + 1] = coef
+            matrix[x_id] = coef
 
-        matrix[0] = bias
+        matrix[-1] = bias
 
         matrix = np.array([float(x) if x is not None else 0 for x in matrix])
         return matrix
@@ -79,7 +78,7 @@ class Task:
         """
         # Разделение строки на A и b
         prepared_strings = matrix_string.replace(' ', '') \
-                               .split('\n')[1:-1]
+                               .split('\n')[1:]
 
         row_sign = [re.findall('=|<=|>=', row)[0] for row in prepared_strings]
 
@@ -125,7 +124,7 @@ class Task:
         matrix = np.array(matrix)
         matrix = matrix + Fraction()
 
-        self._x_matrix_hist = [x for x in range(matrix.shape[0])]
+        self._x_variables_hist = [x for x in range(matrix.shape[0])]
 
         # Добавляем переменные там, где знак неравенства
         for row_id, sign in enumerate(row_sign):
@@ -151,18 +150,12 @@ class Task:
         tmp_index.append('c')
         print(pd.DataFrame(matrix, columns=tmp_columns, index=tmp_index))
 
-    def additional_step(self):
-        matrix = np.append(self._A, self._b.reshape(1, -1).T, axis=1)
-        last_row = -np.sum(matrix, axis=0).reshape(1, -1)
-        matrix = np.append(matrix, last_row, axis=0)
-
-        print('Формирование изначальной матрицы')
-        self.__debug_print(matrix)
-
+    def _simplex_method(self, matrix: np.array) -> np.array:
         # Пока последняя строка матрицы вся не будет состоять из неотрицательных элементов
-        while not all((matrix[-1, :] >= 0)):
+        while not all([round(x, 4) >= 0 for x in matrix[-1, :]]):
+            self.__debug_print(matrix)
             # Определение разрешающего столбца
-            target_col = np.argmin(matrix[-1, :-1])
+            target_col = np.argmin([round(x, 4) for x in matrix[-1, :-1]])
 
             # Определение разрешающей строки
             b = matrix[:-1, -1]
@@ -170,7 +163,8 @@ class Task:
             target_row = np.argmin([b_x / m_x if m_x > 0 else 10 ** 10 for m_x, b_x in zip(target_col_elem, b)])
 
             # Замена переменных строк и столбца
-            self._x_columns[target_col], self._x_rows[target_row] = self._x_rows[target_row], self._x_columns[target_col]
+            self._x_columns[target_col], self._x_rows[target_row] = self._x_rows[target_row], self._x_columns[
+                target_col]
 
             # Формируем матрицу следующей итерации
             next_matrix = deepcopy(matrix)
@@ -197,8 +191,66 @@ class Task:
                 self._x_columns.remove(check_aditional[0])
 
             matrix = next_matrix
+        return matrix
 
-            self.__debug_print(matrix)
+    def additional_step(self):
+        matrix = np.append(self._A, self._b.reshape(1, -1).T, axis=1)
+        last_row = -np.sum(matrix, axis=0).reshape(1, -1)
+        matrix = np.append(matrix, last_row, axis=0)
+
+        print('Формирование изначальной матрицы')
+        self.__debug_print(matrix)
+
+        return self._simplex_method(matrix)
+
+    def get_new_function(self, matrix: np.array) -> np.array:
+        vectors = []
+
+        for var in self._x_variables_hist:
+            if var in self._x_rows:
+                idx = self._x_rows.index(var)
+                x_vector = np.append(-matrix[idx, :-1], matrix[idx, -1])
+                vector = x_vector * self._target_task.func_matrix[var]
+            else:
+                idx = self._x_columns.index(var)
+                vector = np.array([0 for _ in range(len(self._x_columns) + 1)])
+                vector[idx] = 1
+                vector = np.array(vector) + Fraction()
+            vectors.append(vector)
+
+        new_function = np.sum(np.array(vectors), axis=0)
+        new_function[-1] = -new_function[-1]
+
+        return new_function
+
+    def get_result(self, matrix: np.array):
+        vector = [0 for _ in range(len(self._x_rows) + len(self._x_columns))]
+        for x, val in zip(self._x_rows, matrix[:-1, -1]):
+            vector[x] = val
+
+        print('Результирующий вектор')
+        print([round(x, 4) for x in vector])
+
+        result = np.sum(
+            [
+                t_x * coef
+                for t_x, coef in
+                zip(vector[:len(self._target_task.func_matrix[:-1])], self._target_task.func_matrix[:-1])
+            ]
+        ) + self._target_task.func_matrix[-1]
+
+        print(f'Значение функции в точке:')
+        print(round(result, 4))
+
+    def algo(self):
+        matrix = self.additional_step()
+        self.__debug_print(matrix)
+        new_function = self.get_new_function(matrix)
+        target_matrix = deepcopy(matrix)
+        target_matrix[-1] = new_function
+        matrix = self._simplex_method(target_matrix)
+        self.__debug_print(matrix)
+        self.get_result(matrix)
 
     @property
     def A(self):

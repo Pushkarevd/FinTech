@@ -17,7 +17,7 @@ class Parser:
         matrix = parsed_text[1]
         task = Task(target_func, matrix)
 
-        task.additional_step()
+        task.algo()
 
 
 if __name__ == '__main__':
