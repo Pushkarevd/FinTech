@@ -120,11 +120,12 @@ class Task:
             coefs = re.split('x_[0-9]+', row)[:-1]
 
             coefs = [
-                float(re.sub(r'\D', '', coef))
+                float(re.sub(r'[^0-9.]', '', coef))
                 if coef not in ('-', '+')
                 else sign_map.get(coef)
                 for coef in coefs
             ]
+            print(coefs)
 
             for x_id, coef in zip(x_idx, coefs):
                 matrix[row_id][x_id] = coef
@@ -212,7 +213,6 @@ class Task:
         matrix = np.append(matrix, last_row, axis=0)
 
         print('Формирование изначальной матрицы')
-        self.__debug_print(matrix)
 
         return self._simplex_method(matrix)
 
