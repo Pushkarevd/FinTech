@@ -1,0 +1,63 @@
+{
+  "node": "Income > 50000",
+  "left_leaf": {
+    "node": "Credit Score > 700",
+    "left_leaf": {
+      "node": "Debt To Income Ratio < 30",
+      "left_leaf": {
+        "node": "Approve"
+      },
+      "right_leaf": {
+        "node": "Employment Type = Permanent",
+        "left_leaf": {
+          "node": "Approve"
+        },
+        "right_leaf": {
+          "node": "Review"
+        }
+      }
+    },
+    "right_leaf": {
+      "node": "Years in Current Job > 5",
+      "left_leaf": {
+        "node": "Approve"
+      },
+      "right_leaf": {
+        "node": "Number of Open Credit Lines > 3",
+        "left_leaf": {
+          "node": "Review"
+        },
+        "right_leaf": {
+          "node": "Reject"
+        }
+      }
+    }
+  },
+  "right_leaf": {
+    "node": "Loan Amount < 100000",
+    "left_leaf": {
+      "node": "Credit Score > 650",
+      "left_leaf": {
+        "node": "Approve"
+      },
+      "right_leaf": {
+        "node": "Review"
+      }
+    },
+    "right_leaf": {
+      "node": "Years in Current Job > 3",
+      "left_leaf": {
+        "node": "Approve"
+      },
+      "right_leaf": {
+        "node": "Number of Delinquent Accounts = 0",
+        "left_leaf": {
+          "node": "Approve"
+        },
+        "right_leaf": {
+          "node": "Reject"
+        }
+      }
+    }
+  }
+}
