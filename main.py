@@ -3,6 +3,8 @@ import numpy as np
 from sympy import symbols, lambdify, sympify
 import matplotlib.pyplot as plt
 
+COLORS = ['r', 'g']
+
 
 @dataclass
 class Point:
@@ -25,17 +27,13 @@ def get_intersection(A: Point, B: Point, l: float) -> Point:
     return Point(x, y)
 
 
-def shubert_piyavskii(func: callable, a: float, b: float, l: float, epsilon=0.001) -> float:
-    plt.plot(dots, list(map(func, dots)))
-    plt.grid()
-
+def shubert_piyavskii(func: callable, a: float, b: float, l: float, epsilon=0.001, max_iter=10_000) -> float:
     A = Point(a, func(a))
     B = Point(b, func(b))
 
     g_0 = lambda x: func(a) - l * abs(x - a)
     g_1 = lambda x: func(b) - l * abs(x - b)
     p_1 = lambda x: max(g_0(x), g_1(x))
-    plt.plot(dots, list(map(p_1, dots)))
 
     u = get_intersection(A, B, l)
 
@@ -43,7 +41,8 @@ def shubert_piyavskii(func: callable, a: float, b: float, l: float, epsilon=0.00
     points = [A, Point(u.x, func(u.x)), B]
 
     delta = 10 ** 10_000
-    while delta > epsilon:
+    n_iter = 0
+    while delta > epsilon or n_iter == max_iter:
         # Индекс минимума ломаной
         min_line_point_idx = np.argmin([point.y for point in line_points])
 
@@ -66,18 +65,28 @@ def shubert_piyavskii(func: callable, a: float, b: float, l: float, epsilon=0.00
         points.insert(min_line_point_idx, func_left_point)
         points.insert(min_line_point_idx + 2, func_right_point)
 
-        plt.plot([left_point.x, min_point.x, right_point.x], [left_point.y, min_point.y, right_point.y])
+        n_iter += 1
 
+        plt.plot(
+            [left_point.x, min_point.x, right_point.x],
+            [left_point.y, min_point.y, right_point.y],
+            color=COLORS[n_iter % 2]
+        )
+
+    plt.plot(dots, list(map(func, dots)), label='target', color='blue')
+    plt.plot(dots, list(map(p_1, dots)), color=COLORS[n_iter % 2])
+    plt.grid()
     plt.show()
 
     return min_point
 
-a, b = -1.5, 1.5
-dots = np.linspace(a, b, 1000)
 
-t = '(1.5 - x + x * 0.5)^2 + (2.25 - x + x*0.5^2)^2 + (2.625 - x + x * 0.5^3)^2'
-func = '(x^2-1)^2+x'
+if __name__ == "__main__":
+    # func = '(1.5 - x + x * 0.5)^2 + (2.25 - x + x*0.5^2)^2 + (2.625 - x + x * 0.5^3)^2'
+    func = '(x^2-1)^2+x'
+    a, b = -1.5, 1.5
+    L = 5
 
-
-func = create_exc_func(func)
-shubert_piyavskii(func, a, b, 5)
+    dots = np.linspace(a, b, 1000)
+    func = create_exc_func(func)
+    print(shubert_piyavskii(func, a, b, L))
