@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 from scipy.optimize import minimize
+from gekko import GEKKO
+from tqdm import tqdm
 
 
 class InvestOptimizer:
@@ -10,7 +12,7 @@ class InvestOptimizer:
         self._cash = cash
 
         self._calc_metrics()
-        self.baies()
+        self.laplace()
 
     def _calc_metrics(self):
         columns = df.columns.values
@@ -31,30 +33,36 @@ class InvestOptimizer:
         result_columns.extend(['ev', 'disp', 'sigma', 'cv'])
 
         self._metric_df = pd.DataFrame(result, columns=result_columns)
-        print(self._metric_df)
 
     def baies(self):
         expected_values = np.array(self._metric_df['ev'])
         init_prices = np.array(self._df['init_price'])
 
-        n = df.shape[0]
+        max_shares = (self._cash / init_prices).astype(int)
 
-        loss = lambda x: -np.sum(expected_values * x)
+        m = GEKKO(remote=False)
+        shares = [m.Var(lb=0, ub=max_price, integer=True) for max_price in max_shares]
 
-        constraints = (
-            {"type": "ineq", "fun": lambda x: np.sum(init_prices * x) - self._cash}
-        )
+        m.Equation(m.sum([share * price for share, price in zip(shares, init_prices)]) <= self._cash)
+        m.Obj(-m.sum([share * ev for share, ev in zip(shares, expected_values)]))
 
-        x0 = np.full(n, 1 / n)
+        m.options.SOLVER = 1
+        m.solve(disp=False)
 
-        result = minimize(loss, x0, constraints=constraints)
+        for ticker, share in zip(self._df.index, shares):
+            print(f'Количество акций {ticker}: {int(share.value[0])}')
 
-        optimal_investments = result.x
+    def laplace(self):
+        columns = df.columns.values
+        prob_columns = np.delete(columns, np.argwhere(columns == 'init_price'))
 
-        print("Optimal investments:", ', '.join([f'{x:.2f}' for x in optimal_investments]))
-        print(self._metric_df['ev'])
+        average_returns = self._df[prob_columns].mean(axis=1)
+        print(average_returns)
+
+    def vald(self):
+        pass
 
 if __name__ == "__main__":
-    cash = 50_000
+    cash = 500_000
     df = pd.read_json('data.json').T
     instance = InvestOptimizer(df, cash)
