@@ -28,6 +28,10 @@ class Species:
     def y(self):
         return self._y
 
+    def mutate(self):
+        self._x += self._x * random.uniform(-1, 1)
+        self._y += self._y * random.uniform(-1, 1)
+
 
 class ManuelSpecies(Species):
 
@@ -82,6 +86,11 @@ class GeneticAlgo:
             return False
         return True
 
+    def mutate(self):
+        for i in range(len(self._population)):
+            if random.random() < 0.1:
+                self._population[i].mutate()
+
     def start(self):
         epoch = 0
 
@@ -105,6 +114,8 @@ class GeneticAlgo:
 
             self._population.extend([Species(self._x_boarder, self._y_boarder)
                                      for _ in range(self._n_species - len(self._population))])
+
+            self.mutate()
 
             # Ранжируем новую популяцию
             self.__sort_species()
