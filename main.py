@@ -55,7 +55,8 @@ class ExpertTask:
     def __write_result(self):
         with open("output.txt", "w") as file:
             file.write(
-                f'Вектор оценки экспертов: {self.__get_objects_estimation().values}\nВектор квалификации экспертов: {self.__get_expert_qualification().values}'
+                f'Вектор оценки экспертов: {self.__get_objects_estimation().values}\n \
+                Вектор квалификации экспертов: {self.__get_expert_qualification().values}'
             )
 
     def __plot_dots(self):
@@ -67,6 +68,7 @@ class ExpertTask:
 
         plt.title('Визуализация с методом PCA и кластеризации DBSCAN')
         plt.scatter(X_pca[:, 0], X_pca[:, 1], c=clusters)
+
         plt.grid()
         plt.show()
 
